@@ -7,10 +7,10 @@ This repo contains tools to help Dell/EMC Networker backup administrators automa
 ## Usage and examples
 Output from `./nwrestvmrecover`  -h
 ```
-nwrestvmrecover [OPTION]... vmname - Script to trigger a restore via the Networker REST API
+nwrestvmrecover [OPTION]... [-x] vmname - Script to trigger a restore via the Networker REST API
 
 where:
-    -h  shows this help text
+   -h  shows this help text
     -a  Authentication digest
     -b  Networker (backup) server name
     -c  Destination cluster resource
@@ -23,6 +23,7 @@ where:
     -r  Reconnect NIC after recover?
     -s  Destination datastore
     -v  vCenter Server
+    -x  Must be present to confirm that the recover must be executed
     vmname : Name of the Virtual Machine to recover (source)
 
 All the parameters are required by this script (but may not be by the API)

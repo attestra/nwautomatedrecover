@@ -1,5 +1,5 @@
 # nwautomatedrecover
-Tools for scripted recovers using the Networker REST API
+Tools for scripted recovers using the Networker REST API. It has been tested in only one environment, so please test it in a lab before running in production. Also, it is suggested, like for any piece of code that you download from the internet, that your read it completely before testing it.
 
 ## Overview
 This repo contains tools to help Dell/EMC Networker backup administrator automate recoveries
@@ -25,6 +25,8 @@ where:
     vmname : Name of the Virtual Machine to recover (source)
 
 All the parameters are required by this script (but may not be by the API)
+
+Note: Always test in a lab first
 ```
 ## Prerequisites/compatibility
 ### Prerequisites

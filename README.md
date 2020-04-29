@@ -1,8 +1,9 @@
 # nwautomatedrecover
-Tools for scripted recovers using the Networker REST API. It has been tested in only one environment, so please test it in a lab before running in production. Also, it is suggested, like for any piece of code that you download from the internet, that your read it completely before testing it.
+Tools for scripted recovers using the Networker REST API.
 
+NOTE: Tested in only one environment, so please test it in a lab before running in production. Also, as for any piece of code that you download from the internet, your should read and understand the code completely before running it. Provided without warranty.
 ## Overview
-This repo contains tools to help Dell/EMC Networker backup administrator automate recoveries
+This repo contains tools to help Dell/EMC Networker backup administrators automate recoveries
 ## Usage and examples
 Output from `./nwrestvmrecover`  -h
 ```
@@ -79,4 +80,4 @@ Networker 19.1 REST API Reference Guide: https://www.dellemc.com/pt-pt/collatera
 The blog post that gave me the idea of starting to work on automated recoveries: https://nsrd.info/blog/2020/03/30/basics-finding-unprotected-virtual-machines-with-networker/
 ## Contribute
 Feel free to open issues if you experience problems, but make sure you look at the TROUBLESHOOTING.md page before to make sure it's not a Networker or VMWare issue.
-Pull requests are welcome, whether it's for a fix or enhancement
+Pull requests are welcome, whether it's for documentation, bugfix or enhancement.

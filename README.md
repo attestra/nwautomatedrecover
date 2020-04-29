@@ -4,7 +4,7 @@ Tools for scripted recovers using the Networker REST API
 ## Overview
 This repo contains tools to help Dell/EMC Networker backup administrator automate recoveries
 ## Usage and examples
-Output from ./nwrestvmrecover -h
+Output from `./nwrestvmrecover`  -h
 ```
 nwrestvmrecover [OPTION]... vmname - Script to trigger a restore via the Networker REST API
 

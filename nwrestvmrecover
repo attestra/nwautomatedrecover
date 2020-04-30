@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+
+# ##################################################
+# Networker automated VM recover script
+# ##################################################
+
+############## Begin Options and Usage ###################
+usage="$(basename "$0") [OPTION]... [-x] vmname - Script to trigger a restore via the Networker REST API
+
+where:
+   -h  shows this help text
+    -a  Authentication digest
+    -b  Networker (backup) server name
+    -c  Destination cluster resource
+    -d  Destination datacenter
+    -e  Destination (ESXi) host
+    -f  VM Folder
+    -j  Job name
+    -n  VM name (once recovered, destination)
+    -p  Power on after recover?
+    -r  Reconnect NIC after recover?
+    -s  Destination datastore
+    -v  vCenter Server
+    -x  Must be present to confirm that the recover must be executed
+    vmname : Name of the Virtual Machine to recover (source)
+
+All the parameters are required by this script (but may not be by the API)
+
+Note: Always test in a lab first
+"
+
+if [[ $1 == "" ]]; then
+    echo -e "\nNo argument provided, see help (-h)\n"
+    exit 1;
+fi
+
+###########################################################
+
+# Read the options and set stuff
+
+while getopts ':a:b:c:d:e:f:hj:n:p:r:s:v:x' option; do
+  case "$option" in
+    h) echo "$usage"
+       exit
+       ;;
+    a) auth=$OPTARG
+       ;;
+    b) server=$OPTARG
+       ;;
+    c) clusterComputeResourceMoref=$OPTARG
+       ;;
+    d) datacenterMoref=$OPTARG
+       ;;
+    e) hostMoref=$OPTARG
+       ;;
+    f) vmFolderMoref=$OPTARG
+       ;;
+    j) jobName=$OPTARG
+       ;;
+    n) vmName=$OPTARG
+       ;;
+    p) powerOn=$OPTARG
+       ;;
+    r) reconnectNic=$OPTARG
+       ;;
+    s) recoverdatastore=$OPTARG
+       ;;
+    v) vcenterserver=$OPTARG
+       ;;
+    x) dryrun=false
+       ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+# Source VM name is the last arg
+svmname="${!#}"
+
+echo -e "\n==================================================\nHere are the values of the parameters you entered:"
+
+# Display variables
+echo -e "\nServer = $server\nVM to recover = $svmname\nAuth = xxxx\nvCenter Server = $vcenterserver\nRecover Datastore = $recoverdatastore\nCluster Compute Res. = $clusterComputeResourceMoref"
+echo -e "Datacenter = $datacenterMoref\nHost = $hostMoref\nVMFolder =  $vmFolderMoref\nDestination VMname = $vmName\nJobName = $jobName\nPowerOn = $powerOn\nReconnectNIC = $reconnectNic"
+echo -e "=================================================="
+
+# Input validation
+[[ $recoverdatastore =~ ^datastore-.*$ ]] || { echo "Invalid datastore format. Should be datastore-*, exiting" ; exit 1; }
+[[ $clusterComputeResourceMoref =~ ^domain-.*$ ]] || { echo "Invalid compute ressource format. Should be domain-*, exiting" ; exit 1; }
+[[ $datacenterMoref =~ ^datacenter-.*$ ]] || { echo "Invalid datacenter format. Should be domain-*, exiting" ; exit 1; }
+[[ $hostMoref =~ ^host-.*$ ]] || { echo "Invalid host format. Should be host-*, exiting" ; exit 1; }
+[[ $vmFolderMoref =~ ^group-.*$ ]] || { echo "Invalid VM folder format. Should be group-*, exiting" ; exit 1; }
+[[ $powerOn =~ ^(true|false)$ ]] || { echo "Invalid powerOn value. Should be true or false, exiting" ; exit 1; }
+[[ $reconnectNic =~ ^(true|false)$ ]] || { echo "Invalid reconnectNic value. Should be true or false, exiting" ; exit 1; }
+
+echo -e "\nGetting the uuid of the VM to recover...\n"
+
+# Input validation
+uuid=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/protectedvms' --header 'Authorization: Basic '$auth'' \
+| jq -r ".vms[] | select(.name ==\"$svmname\") | .uuid")
+
+[[ -z "$uuid" ]] && { echo "Invalid VM Name, exiting" ; exit 1; }
+
+echo "VM uuid = $uuid"
+
+# Input validation
+[[ $uuid =~ ^[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}$ ]] || { echo "Invalid VM Unique ID, exiting" ; exit 1; }
+
+echo -e "\nGetting the number of available backups...\n"
+
+count=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/vcenters/'$vcenterserver'/protectedvms/'$uuid'/backups'\
+ --header 'Authorization: Basic '$auth'' | jq '.count')
+
+echo -e "Number of available backups: $count\n"
+
+echo -e "Picking a random backup to recover from...\n"
+
+randombackup=$((RANDOM%$count+1))
+
+echo -e "Random Backup = $randombackup\n"
+
+echo -e "Getting the backup ID of the randomly selected backup...\n"
+
+backupid=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/vcenters/'$vcenterserver'/protectedvms/'$uuid'/backups'\
+ --header 'Authorization: Basic '$auth'' |  jq -r '[.backups['$randombackup'].id]|.[]' )
+
+echo -e "Backup ID = $backupid\n"
+
+echo -e "Choosing randomly if we restore from a backup or a clone...\n"
+
+cloneornot=$(( ( RANDOM % 2 )  + 0 ))
+
+echo -e "Value of the cloneornot variable: $cloneornot. If the value is 0, it will restore from a backup. If the value is 1, it will restore from a clone\n"
+
+echo -e "Getting the backup instance ID (That's the ID of the clone or backup)...\n"
+
+recoverurl=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/vcenters/'$vcenterserver'/protectedvms/'$uuid'/backups/'$backupid'' \
+ --header 'Authorization: Basic '$auth'' | jq -r '[.instances['$cloneornot'].links[1].href]|.[]')
+
+# Is this a clone? [.instances[1].clone]|.[] is a clone, [.instances[0].clone]|.[] is not
+instanceisclone=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/vcenters/'$vcenterserver'/protectedvms/'$uuid'/backups/'$backupid'' \
+ --header 'Authorization: Basic '$auth'' | jq -r '[.instances['$cloneornot'].clone]|.[]')
+
+echo -e "Recover URL = $recoverurl\n"
+echo -e "Instance is clone? = $instanceisclone\n"
+echo -e "Getting disk list from the backup...\n"
+
+disks=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/vcenters/'$vcenterserver'/protectedvms/'$uuid'/backups/'$backupid'' \
+ --header 'Authorization: Basic '$auth'' | jq -r '[.vmInformation.disks[]]' | egrep -v '(thinProvisioned|sizeInKb|datastoreName)' | sed -r 's/datastore-.*/'$recoverdatastore'"/g')
+
+#echo -e "Disks description: $disks\n"
+
+#echo -e "Do you want to perform the recovery? Make sure the VM name doesn't exist, the datastore is not near full, etc. before pressing enter. To exit, press Ctrl-C\n"
+
+#read
+
+#echo "Enter pressed, proceeding with recovery.  Press Ctrl-C if you want to cancel"
+
+json="{
+\"recoverMode\": \"New\",
+\"clusterComputeResourceMoref\": \"$clusterComputeResourceMoref\",
+    \"datacenterMoref\": \"$datacenterMoref\" ,
+\"datastoreMoref\": \"$recoverdatastore\",
+\"vCenterHostname\": \"$vcenterserver\",
+\"hostMoref\": \"$hostMoref\",
+\"vmFolderMoref\": \"$vmFolderMoref\",
+\"vmName\": \"$vmName\",
+\"jobName\": \"$jobName\",
+\"powerOn\": \"$powerOn\",
+\"disks\": $disks,
+    \"reconnectNic\": \"$reconnectNic\"
+}"
+
+#echo $dryrun
+
+echo -e "Here's the contents of the JSON that will be sent to the REST API:\n\n \
+================================================================== \n\n \
+$json \
+\n\n================================================================ \n"
+
+
+if [ "$dryrun" == 'false' ]
+then
+  echo -e 'Executing the REST call, here is the output:'
+  echo $json | curl -v -S -k --location --request POST ''$recoverurl'' --header 'Authorization: Basic '$auth'' --header 'Content-Type: application/json' -d @-
+  echo '======================================================='
+  echo -e "\nTroubleshooting:\nYou can see the REST API logs on the Networker server in (\$Networker Directory)/logs/restapi/restapi.log."
+  echo -e "Access management is done by the Networker, not by the API so if the REST request is made, but your restore"
+  echo -e "doesn't start, check your daemon.raw log file. Also, check the VMWare events and alerts in your VMWare client."
+  echo '======================================================='
+else
+  echo -e "NOTE: The script ran in 'simulation mode'. No (POST) API call has been made to start a recover job.\
+  This call is only made if the '-x' command-line switch is present\n"
+fi
+
+
+# TODO get the job ID from the response headers, and query it until it is complete, then send an email
+# TODO make sure we receive a 201 HTTP response code on the POST
+# TODO add a command-line option 'noclone'
+# TODO option to determine on how many backups it will random
+# TODO option to change the frequency of clones vs backups
+# TODO Check if jq exists
+# DONE Make the arguments be matched with --something.  For example, command --nwserver nwserver.domain.local --vcenterserver vcenter.domain.local, etc.

@@ -191,12 +191,3 @@ else
   echo -e "NOTE: The script ran in 'simulation mode'. No (POST) API call has been made to start a recover job.\
   This call is only made if the '-x' command-line switch is present\n"
 fi
-
-
-# TODO get the job ID from the response headers, and query it until it is complete, then send an email
-# TODO make sure we receive a 201 HTTP response code on the POST
-# TODO add a command-line option 'noclone'
-# TODO option to determine on how many backups it will random
-# TODO option to change the frequency of clones vs backups
-# TODO Check if jq exists
-# DONE Make the arguments be matched with --something.  For example, command --nwserver nwserver.domain.local --vcenterserver vcenter.domain.local, etc.

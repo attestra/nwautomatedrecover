@@ -77,8 +77,8 @@ Here's some guidance (there may be another way):
  - Currently only for VMWare recoveries
    - The only recovery type supported: New (creates a new VM and recovers data into it)
 ## References/Documentation
-Networker 19.1 REST API Reference Guide: https://www.dellemc.com/pt-pt/collaterals/unauth/quick-reference-guides/products/data-protection/docu94009.pdf
-The blog post that gave me the idea of starting to work on automated recoveries: https://nsrd.info/blog/2020/03/30/basics-finding-unprotected-virtual-machines-with-networker/
+ - Networker 19.1 REST API Reference Guide: https://www.dellemc.com/pt-pt/collaterals/unauth/quick-reference-guides/products/data-protection/docu94009.pdf
+ - The blog post that gave me the idea of starting to work on automated recoveries: https://nsrd.info/blog/2020/03/30/basics-finding-unprotected-virtual-machines-with-networker/
 ## Contribute
 Feel free to open issues if you experience problems, but make sure you look at the TROUBLESHOOTING.md page before to make sure it's not a Networker or VMWare issue.
 Pull requests are welcome, whether it's for documentation, bugfix or enhancement.

@@ -145,9 +145,9 @@ echo -e "Instance is clone? = $instanceisclone\n"
 echo -e "Getting disk list from the backup...\n"
 
 disks=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/vcenters/'$vcenterserver'/protectedvms/'$uuid'/backups/'$backupid'' \
- --header 'Authorization: Basic '$auth'' | jq -r '[.vmInformation.disks[]]' | egrep -v '(thinProvisioned|sizeInKb|datastoreName)' | sed -r 's/datastore-.*/'$recoverdatastore'"/g')
+	--header 'Authorization: Basic '$auth'' | jq -r '[.vmInformation.disks[]]' | egrep -v '(thinProvisioned|sizeInKb|datastoreName)' | sed -r 's/datastore-.*/'$recoverdatastore'",/g' | awk '$1 == "}"{sub(/,$/, "", s)} NR>1{print s} {s=$0} END{print s}' )
 
-#echo -e "Disks description: $disks\n"
+echo -e "Disks description: $disks\n"
 
 #echo -e "Do you want to perform the recovery? Make sure the VM name doesn't exist, the datastore is not near full, etc. before pressing enter. To exit, press Ctrl-C\n"
 

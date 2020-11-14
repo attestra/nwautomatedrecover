@@ -144,6 +144,8 @@ echo -e "Recover URL = $recoverurl\n"
 echo -e "Instance is clone? = $instanceisclone\n"
 echo -e "Getting disk list from the backup...\n"
 
+# Note: since we remove the last element of the (JSON) disks array, we need the
+# awk command to remove the comma on the last line of the arry
 disks=$(curl -ks --location --request GET 'https://'$server':9090/nwrestapi/v3/global/vmware/vcenters/'$vcenterserver'/protectedvms/'$uuid'/backups/'$backupid'' \
 	--header 'Authorization: Basic '$auth'' | jq -r '[.vmInformation.disks[]]' | egrep -v '(thinProvisioned|sizeInKb|datastoreName)' | sed -r 's/datastore-.*/'$recoverdatastore'",/g' | awk '$1 == "}"{sub(/,$/, "", s)} NR>1{print s} {s=$0} END{print s}' )
 
